@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "types": ["d3-ease"],
     "target": "es5",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
