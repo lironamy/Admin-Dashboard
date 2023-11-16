@@ -47,7 +47,7 @@ export const SizeForm: React.FC<SizeFormProps> = ({
   const title = initialData ? 'עריכת מידה' : 'יצירת מידה';
   const description = initialData ? 'עריכת מידה קיימת' : 'הוספת מידה חדשה';
   const toastMessage = initialData ? 'מידה עודכנה' : 'מידה נוצרה';
-  const action = initialData ? 'שמירה' : 'יצירה';
+  const action = initialData ? 'שמירה' : 'צור מידה';
 
   const form = useForm<SizeFormValues>({
     resolver: zodResolver(formSchema),
