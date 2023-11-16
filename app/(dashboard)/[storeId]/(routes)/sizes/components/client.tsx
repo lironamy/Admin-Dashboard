@@ -7,16 +7,15 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { Heading } from "@/components/ui/heading";
 import { Separator } from "@/components/ui/separator";
-import { ApiAlert } from "@/components/ui/api-alert";
-
-import { columns, CategoryColumn } from "./columns";
 import { ApiList } from "@/components/ui/api-list";
 
-interface CategoriesClientProps {
-  data: CategoryColumn[];
+import { columns, SizeColumn } from "./columns";
+
+interface SizesClientProps {
+  data: SizeColumn[];
 }
 
-export const CategoriesClient: React.FC<CategoriesClientProps> = ({
+export const SizesClient: React.FC<SizesClientProps> = ({
   data
 }) => {
   const params = useParams();
@@ -25,16 +24,16 @@ export const CategoriesClient: React.FC<CategoriesClientProps> = ({
   return (
     <>
       <div className="flex items-center justify-between">
-        <Heading title={`קטגוריות (${data.length})`} description="נהל קטגוריות עבור החנות שלך" />
-        <Button onClick={() => router.push(`/${params.storeId}/categories/new`)}>
-        הוסף חדש <Plus className="mr-2 h-4 w-4" />
+        <Heading title={`מידה (${data.length})`} description="נהל מידות עבור המוצרים שלך" />
+        <Button onClick={() => router.push(`/${params.storeId}/sizes/new`)}>
+         הוסף חדש <Plus className="mr-2 h-4 w-4" /> 
         </Button>
       </div>
       <Separator />
       <DataTable searchKey="name" columns={columns} data={data} />
-      <Heading title="API" description="קריאות לניהול קטגוריות" />
+      <Heading title="API" description="קריאות לניהול מידות" />
       <Separator />
-      <ApiList entityName="categories" entityIdName="categoryId" />
+      <ApiList entityName="sizes" entityIdName="sizeId" />
     </>
   );
 };
