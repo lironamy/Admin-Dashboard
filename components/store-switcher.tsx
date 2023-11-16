@@ -58,9 +58,9 @@ export default function StoreSwitcher({ className, items = [] }: StoreSwitcherPr
           aria-label="בחר חנות"
           className={cn("w-[200px] justify-between", className)}
         >
-          <Store className="mr-2 h-4 w-8" />
+          <Store className="ml-2 h-4 w-8" />
           {currentStore?.label}
-          <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
+          <ChevronsUpDown className="mr-auto h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0">
@@ -75,11 +75,11 @@ export default function StoreSwitcher({ className, items = [] }: StoreSwitcherPr
                   onSelect={() => onStoreSelect(store)}
                   className="text-sm"
                 >
-                  <Store className="mr-2 h-4 w-8" />
+                  <Store className="ml-2 h-4 w-8" />
                   {store.label}
                   <Check
                     className={cn(
-                      "ml-auto h-4 w-4",
+                      "mr-auto h-4 w-4",
                       currentStore?.value === store.value
                         ? "opacity-100"
                         : "opacity-0"
@@ -98,7 +98,7 @@ export default function StoreSwitcher({ className, items = [] }: StoreSwitcherPr
                   storeModal.onOpen()
                 }}
               >
-                <PlusCircle className="mr-2 h-5 w-8" />
+                <PlusCircle className="ml-2 h-5 w-8" />
                 צור חנות חדשה
               </CommandItem>
             </CommandGroup>
