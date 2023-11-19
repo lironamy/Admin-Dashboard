@@ -50,20 +50,59 @@ export async function POST(req: Request) {
         orderItems: true,
       }
     });
+  
+    const productQuantitiesToUpdate = order.orderItems.map((orderItem) => ({
+      id: orderItem.productId,
+      quantity: orderItem.orderQuantity,
+    }));
 
-    const productIds = order.orderItems.map((orderItem) => orderItem.productId);
-
-    await prismadb.product.updateMany({
-      where: {
-        id: {
-          in: [...productIds],
+    // TODO: Update product quantities in DB (prisma) and if 0, set isAvailable to false
+    for (const { quantity } of productQuantitiesToUpdate) {
+    await prismadb.$transaction([
+      prismadb.product.updateMany({
+        where: {
+          id: { in: productQuantitiesToUpdate.map(p => p.id) } 
         },
-      },
-      data: {
-        isArchived: true
-      }
-    });
+        data: {
+          quantity: {
+            decrement: quantity, 
+          },
+          isArchived: {
+            set: false,
+          },
+        }
+      }),
+      
+    
+      // Archive products that are out of stock
+      prismadb.product.updateMany({
+        where: {
+          AND: [
+            { id: { in: productQuantitiesToUpdate.map(p => p.id) } },
+            { quantity: 0 }, 
+          ],
+        }, 
+        data: {
+          quantity: {
+            set: 0, 
+          },
+          isArchived: {
+            set: true,
+          },
+        }
+
+      }),
+    ])
   }
+
+
+
+  }
+
+
+
+  
+  
 
   return new NextResponse(null, { status: 200 });
 };
