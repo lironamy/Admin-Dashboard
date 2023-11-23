@@ -101,7 +101,10 @@ export async function GET(
 ) {
   try {
     const { searchParams } = new URL(req.url)
+    const name= searchParams.get(' name') || undefined;
+    const description= searchParams.get('description') || undefined;
     const categoryId = searchParams.get('categoryId') || undefined;
+    const searchValue = decodeURIComponent(searchParams.get('searchValue') || "") || undefined;
     const colorId = searchParams.get('colorId') || undefined;
     const sizeId = searchParams.get('sizeId') || undefined;
     const isFeatured = searchParams.get('isFeatured');
@@ -114,9 +117,13 @@ export async function GET(
       where: {
         storeId: params.storeId,
         categoryId,
+        name: {
+            contains: searchValue
+          },
+        description,
         colorId,
         sizeId,
-        isFeatured: isFeatured ? true : undefined,
+        isFeatured: isFeatured ? true : undefined ,// we dont pass false so it ignores this clause
         isArchived: false,
       },
       include: {
