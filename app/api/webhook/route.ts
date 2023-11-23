@@ -67,7 +67,7 @@ export async function POST(req: Request) {
         },
         data: {
           quantity: {
-            decrement: quantity -quantity, 
+            decrement: quantity, 
           },
           isArchived: {
             set: false,
