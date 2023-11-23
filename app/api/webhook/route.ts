@@ -58,6 +58,8 @@ export async function POST(req: Request) {
 
     // TODO: Update product quantities in DB (prisma) and if 0, set isAvailable to false
     for (const { quantity } of productQuantitiesToUpdate) {
+      console.log(quantity);
+      console.log(productQuantitiesToUpdate);
     await prismadb.$transaction([
       prismadb.product.updateMany({
         where: {
@@ -65,17 +67,20 @@ export async function POST(req: Request) {
         },
         data: {
           quantity: {
-            decrement: quantity, 
+            decrement: quantity -quantity, 
           },
           isArchived: {
             set: false,
           },
         }
-      }),
+      }) 
+      
+      , 
       
     
       // Archive products that are out of stock
       prismadb.product.updateMany({
+        
         where: {
           AND: [
             { id: { in: productQuantitiesToUpdate.map(p => p.id) } },
