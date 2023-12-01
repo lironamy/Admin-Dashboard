@@ -19,8 +19,8 @@ export async function GET(
       include: {
         images: true,
         category: true,
-        size: true,
         color: true,
+        productSizes: true,
       }
     });
   
@@ -79,8 +79,9 @@ export async function PATCH(
     const { userId } = auth();
 
     const body = await req.json();
+    console.log('[PRODUCT_PATCH]', body);
 
-    const { name, descriptionHeader, description, price, categoryId, images, colorId, sizeId, isFeatured, isArchived, quantity  } = body;
+    const { name, descriptionHeader, description, price, categoryId, images, colorId, isFeatured, isArchived, productSizes  } = body;
 
     if (!userId) {
       return new NextResponse("Unauthenticated", { status: 403 });
@@ -114,16 +115,12 @@ export async function PATCH(
       return new NextResponse("Category id is required", { status: 400 });
     }
 
-    if (!quantity) {
-      return new NextResponse("Quantity is required", { status: 400 });
-    }
-
     if (!colorId) {
       return new NextResponse("Color id is required", { status: 400 });
     }
 
-    if (!sizeId) {
-      return new NextResponse("Size id is required", { status: 400 });
+    if (!productSizes || !productSizes.length) {
+      return new NextResponse("productSizes id is required", { status: 400 });
     }
 
     const storeByUserId = await prismadb.store.findFirst({
@@ -148,13 +145,14 @@ export async function PATCH(
         price,
         categoryId,
         colorId,
-        sizeId,
+        productSizes: {
+          deleteMany: {},
+        },
         images: {
           deleteMany: {},
         },
         isFeatured,
         isArchived,
-        quantity,
       },
     });
 
@@ -163,6 +161,15 @@ export async function PATCH(
         id: params.productId
       },
       data: {
+        productSizes: {
+          createMany: {
+            data: productSizes.map((productSize: { sizeId: string,sizeName: string , quantity: number }) => ({
+              sizeId: productSize.sizeId,
+              sizeName: productSize.sizeName,
+              quantity: productSize.quantity, // Ensure quantity is included
+            })),
+          },
+        },
         images: {
           createMany: {
             data: [

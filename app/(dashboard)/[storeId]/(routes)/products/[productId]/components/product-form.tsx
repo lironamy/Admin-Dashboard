@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { toast } from "react-hot-toast"
 import { Trash } from "lucide-react"
-import { Category, Color, Image, Product, Size } from "@prisma/client"
+import { Category, Color, Image, Product, Size, ProductSize } from "@prisma/client"
 import { useParams, useRouter } from "next/navigation"
 
 import { Input } from "@/components/ui/input"
@@ -28,6 +28,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ImageUpload from "@/components/ui/image-upload"
 import { Checkbox } from "@/components/ui/checkbox"
 
+import ProductSizeInput from "@/components/ui/size-input"
+
 const formSchema = z.object({
   name: z.string().min(1),
   descriptionHeader: z.string().min(1),
@@ -36,8 +38,7 @@ const formSchema = z.object({
   price: z.coerce.number().min(1),
   categoryId: z.string().min(1),
   colorId: z.string().min(1),
-  sizeId: z.string().min(1),
-  quantity: z.coerce.number().min(1),
+  productSizes: z.object({ sizeId: z.string(), sizeName: z.string() , quantity: z.number() }).array(),
   isFeatured: z.boolean().default(false).optional(),
   isArchived: z.boolean().default(false).optional()
 });
@@ -46,8 +47,10 @@ type ProductFormValues = z.infer<typeof formSchema>
 
 interface ProductFormProps {
   initialData: Product & {
-    images: Image[]
+    images: Image[];
+    productSizes: ProductSize[];
   } | null;
+  
   categories: Category[];
   colors: Color[];
   sizes: Size[];
@@ -73,7 +76,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const defaultValues = initialData ? {
     ...initialData,
     price: parseFloat(String(initialData?.price)),
-    quantity: parseInt(String(initialData?.quantity)),
   } : {
     name: '',
     descriptionHeader: '',
@@ -82,23 +84,39 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     price: 0,
     categoryId: '',
     colorId: '',
-    sizeId: '',
-    quantity: 0,
+    productSizes: [
+      ...sizes.map((size) => ({ sizeId: size.id, sizeName: size.name, quantity: 0 })),
+    ],
     isFeatured: false,
     isArchived: false,
   }
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues
+    defaultValues,
   });
 
-  const onSubmit = async (data: ProductFormValues) => {
+  const clicked = async () => {
+    const data = form.getValues();
+
+    data.productSizes = Object.entries(data.productSizes).map(([sizeId, quantity]) => ({
+      sizeId: sizeId as string, // Explicitly cast sizeId as string
+      sizeName: sizes.find((size) => size.id === sizeId)?.name as string,
+      quantity: parseInt(String(quantity)),
+    }));
+    data.productSizes = data.productSizes.filter((ps) => ps.sizeId && ps.quantity > 0 && !isNaN(ps.quantity)).map((ps) => ({ sizeId: ps.sizeId,sizeName: ps.sizeName , quantity: ps.quantity }));
+
+
     try {
+      console.log(data);
       setLoading(true);
       if (initialData) {
+
+        data.images = data.images.map((image) => ({ url: image.url }));
+        
         await axios.patch(`/api/${params.storeId}/products/${params.productId}`, data);
       } else {
+
         await axios.post(`/api/${params.storeId}/products`, data);
       }
       router.refresh();
@@ -109,7 +127,30 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+    
+  }
+
+ 
+
+  // const onSubmit = async (data: ProductFormValues) => {
+  //   console.log(data);
+  //   try {
+  //     console.log(data);
+  //     setLoading(true);
+  //     if (initialData) {
+  //       await axios.patch(`/api/${params.storeId}/products/${params.productId}`, data);
+  //     } else {
+  //       await axios.post(`/api/${params.storeId}/products`, data);
+  //     }
+  //     router.refresh();
+  //     router.push(`/${params.storeId}/products`);
+  //     toast.success(toastMessage);
+  //   } catch (error: any) {
+  //     toast.error('משהו השתבש, נסה שוב מאוחר יותר.');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const onDelete = async () => {
     try {
@@ -149,7 +190,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       </div>
       <Separator />
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 w-full">
+        <form className="space-y-8 w-full">
           <FormField
             control={form.control}
             name="images"
@@ -243,28 +284,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="sizeId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>מידה</FormLabel>
-                  <Select disabled={loading} onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue defaultValue={field.value} placeholder="בחר מידה" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {sizes.map((size) => (
-                        <SelectItem key={size.id} value={size.id}>{size.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            
             <FormField
               control={form.control}
               name="colorId"
@@ -287,29 +307,33 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 </FormItem>
               )}
             />
-            
-            
 
+   
+                        
             <FormField
               control={form.control}
-              name="quantity"
+              name="productSizes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>כמות</FormLabel>
-                  <FormControl>
-                    <Input type="number" disabled={loading} placeholder="10" {...field} />
-                  </FormControl>
+                  <FormLabel>כמות מלאי</FormLabel>
+                  <div className="flex justify-center items-center gap-2">
+                    {sizes.map((size) => (
+                      <ProductSizeInput key={size.id} size={size} control={form.control} loading={loading} />
+                    ))}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
 
+
+
             <FormField
               control={form.control}
               name="isFeatured"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 gap-2">
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 gap-2 my-3 md:my-0">
                   <FormControl>
                     <Checkbox
                       checked={field.value}
@@ -352,7 +376,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               )}
             />
           </div>
-          <Button disabled={loading} className="ml-auto" type="submit">
+          <Button onClick={clicked} disabled={loading} className="ml-auto" type="button">
             {action}
           </Button>
         </form>

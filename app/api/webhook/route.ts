@@ -21,22 +21,21 @@ export async function POST(req: Request) {
     return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 })
   }
 
-  const session = event.data.object as Stripe.Checkout.Session;
-  const address = session?.customer_details?.address;
-
-  const addressComponents = [
-    address?.line1,
-    address?.line2,
-    address?.city,
-    address?.state,
-    address?.postal_code,
-    address?.country
-  ];
-
-  const addressString = addressComponents.filter((c) => c !== null).join(', ');
-
-
   if (event.type === "checkout.session.completed") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const address = session?.customer_details?.address;
+
+    const addressComponents = [
+      address?.line1,
+      address?.line2,
+      address?.city,
+      address?.state,
+      address?.postal_code,
+      address?.country
+    ];
+
+    const addressString = addressComponents.filter(Boolean).join(', ');
+
     const order = await prismadb.order.update({
       where: {
         id: session?.metadata?.orderId,
@@ -50,64 +49,66 @@ export async function POST(req: Request) {
         orderItems: true,
       }
     });
-  
+
     const productQuantitiesToUpdate = order.orderItems.map((orderItem) => ({
       id: orderItem.productId,
       quantity: orderItem.orderQuantity,
     }));
 
-    // TODO: Update product quantities in DB (prisma) and if 0, set isAvailable to false
-    for (const { quantity } of productQuantitiesToUpdate) {
-      console.log(quantity);
-      console.log(productQuantitiesToUpdate);
-    await prismadb.$transaction([
-      prismadb.product.updateMany({
+    const updatePromises = productQuantitiesToUpdate.map(({ id, quantity }) => (
+      prismadb.productSize.update({
         where: {
-          id: { in: productQuantitiesToUpdate.map(p => p.id) } 
+          id,
         },
         data: {
           quantity: {
-            decrement: quantity, 
+            decrement: quantity,
           },
-          isArchived: {
-            set: false,
-          },
-        }
-      }) 
-      
-      , 
-      
+        },
+      })
+    ));
     
-      // Archive products that are out of stock
-      prismadb.product.updateMany({
-        
+    const archivePromise = prismadb.product.updateMany({
+      where: {
+        id: {
+          in: productQuantitiesToUpdate.map(p => p.id),
+        },
+      },
+      data: {
+        isArchived: false,
+      },
+    });
+    
+    const archivePromises = productQuantitiesToUpdate.map(({ id, quantity }) => (
+      prismadb.productSize.findMany({
         where: {
-          AND: [
-            { id: { in: productQuantitiesToUpdate.map(p => p.id) } },
-            { quantity: 0 }, 
-          ],
-        }, 
-        data: {
-          quantity: {
-            set: 0, 
-          },
-          isArchived: {
-            set: true,
-          },
+          productId: id,
+        },
+      })
+      .then((productSizes) => {
+        const totalQuantity = productSizes.reduce((acc, size) => acc + size.quantity, 0);
+        
+        if (totalQuantity === 0) {
+          // If total quantity of all sizes is 0, archive the product
+          return prismadb.product.update({
+            where: {
+              id,
+            },
+            data: {
+              isArchived: {
+                set: true,
+              },
+            },
+          });
         }
-
-      }),
-    ])
+    
+        return Promise.resolve(null); // No need to archive, as there's still some quantity
+      })
+    ));
+    
+    await Promise.all([...updatePromises, archivePromise, ...archivePromises]);
+    
   }
-
-
-
-  }
-
-
-
-  
-  
 
   return new NextResponse(null, { status: 200 });
 };

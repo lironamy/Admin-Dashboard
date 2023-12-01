@@ -17,7 +17,11 @@ const ProductsPage = async ({
     },
     include: {
       category: true,
-      size: true,
+      productSizes: {
+        include: {
+          size: true,
+        }
+      },
       color: true,
     },
     orderBy: {
@@ -33,9 +37,13 @@ const ProductsPage = async ({
     isFeatured: item.isFeatured ? 'כן' : 'לא' ,
     isArchived: item.isArchived ? 'כן' : 'לא',
     price: formatter.format(item.price.toNumber()),
+    productSizes: item.productSizes.map((data) => ({
+      id: data.id,
+      size: data.size.name,
+      quantity: data.quantity,
+    })),
     category: item.category.name,
-    size: item.size.name,
-    quantity: item.quantity ? item.quantity.toString() : '0' ,
+    
     color: item.color.value,
     createdAt: format(item.createdAt, 'dd/MM/yyyy'),
   }));

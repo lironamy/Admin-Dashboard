@@ -19,6 +19,7 @@ export async function POST(
   { params }: { params: { storeId: string } }
 ) {
   const { cartItems } = await req.json();
+  console.log('cart items:', cartItems);
 
   const products = await prismadb.product.findMany({
     where: {
@@ -51,17 +52,27 @@ export async function POST(
       orderItems: {
         create: products.map((item: any) => {
           const cartItem = cartItems.find((orderItem: any) => item.id === orderItem.id);
+          const productSize = cartItem?.ProductSize; // Use optional chaining to handle potential undefined
+          const sizeId = productSize?.sizeId; // Use optional chaining to handle potential undefined
+      
           return {
             product: {
               connect: {
                 id: item.id,
               },
             },
-            orderQuantity: cartItem.orderQuantity,
+            size: {
+              connect: {
+                id: sizeId,
+              },
+            },
+            
+            orderQuantity: cartItem?.orderQuantity, // Use a default value if orderQuantity is undefined
           };
-        }
-        ),
+        }),
       },
+      
+      
     },
   });
 

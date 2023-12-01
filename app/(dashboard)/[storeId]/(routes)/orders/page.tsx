@@ -19,12 +19,10 @@ const OrdersPage = async ({
     include: {
       orderItems: {
         include: {
-          product: true
+          product: true,
+          size: true
         }
       }
-    },
-    orderBy: {
-      createdAt: 'desc'
     }
   });
 
@@ -33,9 +31,14 @@ const OrdersPage = async ({
     phone: item.phone,
     address: item.address,
     products: item.orderItems.map((orderItem) => orderItem.product.name).join(', '),
+    size: item.orderItems.map((orderItem) => orderItem.size.name).join(', '),
+    quantity: item.orderItems.reduce((total, item) => {
+      return total + Number(item.orderQuantity)
+    }, 0),
     totalPrice: formatter.format(item.orderItems.reduce((total, item) => {
-      return total + Number(item.product.price)
-    }, 0)),
+      return total + Number(item.orderQuantity) * Number(item.product.price)
+    }
+      , 0)),
     isPaid: item.isPaid ? 'כן' : 'לא',
     createdAt: format(item.createdAt, 'dd/MM/yyyy'),
   }));

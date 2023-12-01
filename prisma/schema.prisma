@@ -59,14 +59,12 @@ model Product {
   name              String
   descriptionHeader String
   description       String      @db.VarChar(2500)
+  productSizes ProductSize[]
   price             Decimal
   isFeatured        Boolean     @default(false)
   isArchived        Boolean     @default(false)
-  sizeId            String // Foreign Key to Size
-  size              Size        @relation(fields: [sizeId], references: [id])
   colorId           String // Foreign Key to Color
   color             Color       @relation(fields: [colorId], references: [id])
-  quantity          Int         @default(1)
   images            Image[] // Relation to Image model
   orderItems        OrderItem[] // Relation to Order model
   createdAt         DateTime    @default(now())
@@ -74,7 +72,6 @@ model Product {
 
   @@index([storeId])
   @@index([categoryId])
-  @@index([sizeId])
   @@index([colorId])
 }
 
@@ -92,7 +89,6 @@ model Order {
   @@index([storeId])
 }
 
-// Intermediary for a many-to-many relationship
 model OrderItem {
   id            String  @id @default(uuid())
   orderId       String // Foreign Key to Order
@@ -100,22 +96,43 @@ model OrderItem {
   orderQuantity Int
   productId     String // Foreign Key to Product
   product       Product @relation(fields: [productId], references: [id])
+  sizeId        String // Foreign Key to Size
+  size          Size    @relation(fields: [sizeId], references: [id])
 
   @@index([orderId])
   @@index([productId])
+  @@index([sizeId])
 }
 
 model Size {
   id        String    @id @default(uuid())
   storeId   String // Foreign Key to Store
+  productSizes ProductSize[]
   store     Store     @relation("StoreToSize", fields: [storeId], references: [id])
   name      String
   value     String
-  products  Product[] // Relation to Product model
+  OrderItem OrderItem[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
+  @@unique([id, name])
   @@index([storeId])
+}
+
+model ProductSize {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sizeId String
+  sizeName String  
+  size Size @relation(fields: [sizeId], references: [id])
+
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([sizeId, sizeName])
 }
 
 model Color {

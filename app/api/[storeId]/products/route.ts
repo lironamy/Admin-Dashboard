@@ -12,7 +12,7 @@ export async function POST(
 
     const body = await req.json();
 
-    const { name, descriptionHeader, description,  price, categoryId, colorId, sizeId, images, isFeatured, isArchived, quantity  } = body;
+    const { name, descriptionHeader, description,  price, categoryId, colorId, images, isFeatured, isArchived, productSizes  } = body;
 
     if (!userId) {
       return new NextResponse("Unauthenticated", { status: 403 });
@@ -34,6 +34,10 @@ export async function POST(
       return new NextResponse("Images are required", { status: 400 });
     }
 
+    if (!productSizes || !productSizes.length) {
+      return new NextResponse("productSizes are required", { status: 400 });
+    }
+
     if (!price) {
       return new NextResponse("Price is required", { status: 400 });
     }
@@ -44,10 +48,6 @@ export async function POST(
 
     if (!colorId) {
       return new NextResponse("Color id is required", { status: 400 });
-    }
-
-    if (!sizeId) {
-      return new NextResponse("Size id is required", { status: 400 });
     }
 
     if (!params.storeId) {
@@ -73,10 +73,15 @@ export async function POST(
         price,
         isFeatured,
         isArchived,
-        quantity,
+        productSizes: {
+          createMany: {
+            data: [
+              ...productSizes.map((productSize: { sizeId: string,sizeName: string, quantity: number }) => ({ sizeId: productSize.sizeId, sizeName: productSize.sizeName, quantity: productSize.quantity })),
+            ],
+          },
+        },
         categoryId,
         colorId,
-        sizeId,
         storeId: params.storeId,
         images: {
           createMany: {
@@ -122,7 +127,14 @@ export async function GET(
           },
         description,
         colorId,
-        sizeId,
+        productSizes: {
+          some: {
+            sizeId,
+            quantity: {
+              gt: 0,
+            },
+          },
+        },
         isFeatured: isFeatured ? true : undefined ,// we dont pass false so it ignores this clause
         isArchived: false,
       },
@@ -130,7 +142,7 @@ export async function GET(
         images: true,
         category: true,
         color: true,
-        size: true,
+        productSizes: true,
       },
       orderBy: {
         createdAt: 'desc',
