@@ -21,21 +21,23 @@ export async function POST(req: Request) {
     return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 })
   }
 
+  const session = event.data.object as Stripe.Checkout.Session;
+  const address = session?.customer_details?.address;
+
+  const addressComponents = [
+    address?.line1,
+    address?.line2,
+    address?.city,
+    address?.state,
+    address?.postal_code,
+    address?.country
+  ];
+
+  const addressString = addressComponents.filter(Boolean).join(', ');
+
+
   if (event.type === "checkout.session.completed") {
-    const session = event.data.object as Stripe.Checkout.Session;
-    const address = session?.customer_details?.address;
-
-    const addressComponents = [
-      address?.line1,
-      address?.line2,
-      address?.city,
-      address?.state,
-      address?.postal_code,
-      address?.country
-    ];
-
-    const addressString = addressComponents.filter(Boolean).join(', ');
-
+ 
     const order = await prismadb.order.update({
       where: {
         id: session?.metadata?.orderId,
@@ -51,9 +53,12 @@ export async function POST(req: Request) {
     });
 
     const productQuantitiesToUpdate = order.orderItems.map((orderItem) => ({
-      id: orderItem.productId,
+      id: orderItem.productSizeId,
       quantity: orderItem.orderQuantity,
+    
     }));
+
+    console.log('productQuantitiesToUpdate:', productQuantitiesToUpdate);
 
     const updatePromises = productQuantitiesToUpdate.map(({ id, quantity }) => (
       prismadb.productSize.update({
@@ -68,47 +73,68 @@ export async function POST(req: Request) {
       })
     ));
     
-    const archivePromise = prismadb.product.updateMany({
+    // if quantity is 0 in ProductSize table than remove the sizeId from the productSize table for that product
+    const productSizeIds = order.orderItems.map((orderItem) => orderItem.productSizeId);
+      
+    const productSizesQ = await prismadb.productSize.findMany({
       where: {
         id: {
-          in: productQuantitiesToUpdate.map(p => p.id),
+          in: productSizeIds,
         },
-      },
-      data: {
-        isArchived: false,
       },
     });
-    
-    const archivePromises = productQuantitiesToUpdate.map(({ id, quantity }) => (
-      prismadb.productSize.findMany({
-        where: {
-          productId: id,
-        },
-      })
-      .then((productSizes) => {
-        const totalQuantity = productSizes.reduce((acc, size) => acc + size.quantity, 0);
-        
-        if (totalQuantity === 0) {
-          // If total quantity of all sizes is 0, archive the product
-          return prismadb.product.update({
-            where: {
-              id,
-            },
-            data: {
-              isArchived: {
-                set: true,
-              },
-            },
-          });
-        }
-    
-        return Promise.resolve(null); // No need to archive, as there's still some quantity
-      })
-    ));
-    
-    await Promise.all([...updatePromises, archivePromise, ...archivePromises]);
-    
-  }
 
+    const productQuantitiesQ = productSizesQ.map((productSize) => productSize.quantity);
+
+    const shouldRemoveSizes = productQuantitiesQ.every((quantity) => quantity === 0 );
+
+    if (shouldRemoveSizes) {
+      const removeSizePromises = productSizeIds.map((productSizeId) => (
+        prismadb.productSize.update({
+          where: {
+            id: productSizeId,
+          },
+          data: {
+            quantity: 0,
+          },
+        })
+      ));
+
+      await Promise.all(removeSizePromises);
+    }
+  
+
+    // if all quantities are 0 in ProductSize table, set isArchived to true in Product table
+    const productIds = order.orderItems.map((orderItem) => orderItem.productId);
+
+    const productSizes = await prismadb.productSize.findMany({
+      where: {
+        productId: {
+          in: productIds,
+        },
+      },
+    });
+
+    const productQuantities = productSizes.map((productSize) => productSize.quantity);
+
+    const shouldArchiveProducts = productQuantities.every((quantity) => quantity === 0);
+
+    if (shouldArchiveProducts) {
+      const archivePromises = productIds.map((productId) => (
+        prismadb.product.update({
+          where: {
+            id: productId,
+          },
+          data: {
+            isArchived: true,
+          },
+        })
+      ));
+
+      await Promise.all(archivePromises);
+    }
+
+    await Promise.all(updatePromises);
+  }
   return new NextResponse(null, { status: 200 });
 };

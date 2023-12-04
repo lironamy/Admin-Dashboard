@@ -66,6 +66,12 @@ export async function POST(
                 id: sizeId,
               },
             },
+            productSize: {
+              connect: {
+                id: productSize?.id,
+              },
+            },
+
             
             orderQuantity: cartItem?.orderQuantity, // Use a default value if orderQuantity is undefined
           };

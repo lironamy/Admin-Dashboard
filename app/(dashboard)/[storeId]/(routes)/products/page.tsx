@@ -37,13 +37,9 @@ const ProductsPage = async ({
     isFeatured: item.isFeatured ? 'כן' : 'לא' ,
     isArchived: item.isArchived ? 'כן' : 'לא',
     price: formatter.format(item.price.toNumber()),
-    productSizes: item.productSizes.map((data) => ({
-      id: data.id,
-      size: data.size.name,
-      quantity: data.quantity,
-    })),
+    quantity: item.productSizes.reduce((acc, curr) => acc + curr.quantity, 0),
     category: item.category.name,
-    
+    sizes: item.productSizes.map((item) => `${item.size.name}: ${item.quantity}`).join(', '),
     color: item.color.value,
     createdAt: format(item.createdAt, 'dd/MM/yyyy'),
   }));

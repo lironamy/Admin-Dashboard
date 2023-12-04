@@ -33,7 +33,7 @@ export async function GET(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { productId: string, storeId: string } }
+  { params }: { params: { productId: string, storeId: string, productSizeId : string  } }
 ) {
   try {
     const { userId } = auth();
@@ -57,18 +57,19 @@ export async function DELETE(
       return new NextResponse("Unauthorized", { status: 405 });
     }
 
-    const product = await prismadb.product.delete({
+    const deletedProduct = await prismadb.product.delete({
       where: {
-        id: params.productId
+        id: params.productId,
       },
     });
-  
-    return NextResponse.json(product);
+
+    return NextResponse.json(deletedProduct);
   } catch (error) {
-    console.log('[PRODUCT_DELETE]', error);
+    console.error('[PRODUCT_DELETE]', error);
     return new NextResponse("Internal error", { status: 500 });
   }
 };
+
 
 
 export async function PATCH(
@@ -156,31 +157,39 @@ export async function PATCH(
       },
     });
 
-    const product = await prismadb.product.update({
+    const updatedProduct = await prismadb.product.update({
       where: {
         id: params.productId
       },
       data: {
+        name,
+        descriptionHeader,
+        description,
+        price,
+        categoryId,
+        colorId,
+        isFeatured,
+        isArchived,
         productSizes: {
           createMany: {
-            data: productSizes.map((productSize: { sizeId: string,sizeName: string , quantity: number }) => ({
+            data: productSizes.map((productSize: { sizeId: string, sizeName: string, quantity: number }) => ({
               sizeId: productSize.sizeId,
               sizeName: productSize.sizeName,
-              quantity: productSize.quantity, // Ensure quantity is included
+              quantity: productSize.quantity,
             })),
           },
         },
         images: {
           createMany: {
-            data: [
-              ...images.map((image: { url: string }) => image),
-            ],
+            data: images.map((image: { url: string }) => ({
+              url: image.url,
+            })),
           },
         },
       },
-    })
-  
-    return NextResponse.json(product);
+    });
+
+    return NextResponse.json(updatedProduct);
   } catch (error) {
     console.log('[PRODUCT_PATCH]', error);
     return new NextResponse("Internal error", { status: 500 });

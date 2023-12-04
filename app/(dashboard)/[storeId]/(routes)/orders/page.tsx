@@ -23,6 +23,9 @@ const OrdersPage = async ({
           size: true
         }
       }
+    },
+    orderBy: {
+      createdAt: 'desc'
     }
   });
 

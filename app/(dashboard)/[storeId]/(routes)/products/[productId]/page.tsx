@@ -43,7 +43,6 @@ const ProductPage = async ({
           categories={categories} 
           colors={colors}
           sizes={sizes}
-
           initialData={product}
           
         />
