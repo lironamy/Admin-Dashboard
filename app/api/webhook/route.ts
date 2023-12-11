@@ -30,23 +30,12 @@ export async function POST(req: Request) {
     address?.city,
     address?.state,
     address?.postal_code,
-<<<<<<< HEAD
     address?.country,
   ];
 
   const addressString = addressComponents.filter(Boolean).join(", ");
 
   if (event.type === "checkout.session.completed") {
-=======
-    address?.country
-  ];
-
-  const addressString = addressComponents.filter(Boolean).join(', ');
-
-
-  if (event.type === "checkout.session.completed") {
- 
->>>>>>> 84638afcd4981d8e4bf16ea67c36e4fd4c7cfd46
     const order = await prismadb.order.update({
       where: {
         id: session?.metadata?.orderId,
@@ -64,23 +53,14 @@ export async function POST(req: Request) {
     console.log("order recives:", order);
 
     const productQuantitiesToUpdate = order.orderItems.map((orderItem) => ({
-      id: orderItem.productSizeId,
+      id: orderItem.productId,
       quantity: orderItem.orderQuantity,
-<<<<<<< HEAD
       productSize: orderItem.orderProductSizeId,
     }));
 
     console.log("productQuantitiesToUpdate:", productQuantitiesToUpdate);
 
     const updatePromises = order.orderItems.map((orderItem) =>
-=======
-    
-    }));
-
-    console.log('productQuantitiesToUpdate:', productQuantitiesToUpdate);
-
-    const updatePromises = productQuantitiesToUpdate.map(({ id, quantity }) => (
->>>>>>> 84638afcd4981d8e4bf16ea67c36e4fd4c7cfd46
       prismadb.productSize.update({
         where: {
           id: orderItem.orderProductSizeId,
@@ -91,7 +71,6 @@ export async function POST(req: Request) {
           },
         },
       })
-<<<<<<< HEAD
     );
 
     // Check if all quantities are 0 in ProductSize table and set isArchived to true in Product table
@@ -113,76 +92,6 @@ export async function POST(req: Request) {
 
     await Promise.all([...updatePromises, archivePromises]);
   }
-=======
-    ));
-    
-    // if quantity is 0 in ProductSize table than remove the sizeId from the productSize table for that product
-    const productSizeIds = order.orderItems.map((orderItem) => orderItem.productSizeId);
-      
-    const productSizesQ = await prismadb.productSize.findMany({
-      where: {
-        id: {
-          in: productSizeIds,
-        },
-      },
-    });
->>>>>>> 84638afcd4981d8e4bf16ea67c36e4fd4c7cfd46
 
-    const productQuantitiesQ = productSizesQ.map((productSize) => productSize.quantity);
-
-    const shouldRemoveSizes = productQuantitiesQ.every((quantity) => quantity === 0 );
-
-    if (shouldRemoveSizes) {
-      const removeSizePromises = productSizeIds.map((productSizeId) => (
-        prismadb.productSize.update({
-          where: {
-            id: productSizeId,
-          },
-          data: {
-            quantity: 0,
-          },
-        })
-      ));
-
-      await Promise.all(removeSizePromises);
-    }
-  
-
-    // if all quantities are 0 in ProductSize table, set isArchived to true in Product table
-    const productIds = order.orderItems.map((orderItem) => orderItem.productId);
-
-    const productSizes = await prismadb.productSize.findMany({
-      where: {
-        productId: {
-          in: productIds,
-        },
-      },
-    });
-
-    const productQuantities = productSizes.map((productSize) => productSize.quantity);
-
-    const shouldArchiveProducts = productQuantities.every((quantity) => quantity === 0);
-
-    if (shouldArchiveProducts) {
-      const archivePromises = productIds.map((productId) => (
-        prismadb.product.update({
-          where: {
-            id: productId,
-          },
-          data: {
-            isArchived: true,
-          },
-        })
-      ));
-
-      await Promise.all(archivePromises);
-    }
-
-    await Promise.all(updatePromises);
-  }
   return new NextResponse(null, { status: 200 });
-<<<<<<< HEAD
 }
-=======
-};
->>>>>>> 84638afcd4981d8e4bf16ea67c36e4fd4c7cfd46
