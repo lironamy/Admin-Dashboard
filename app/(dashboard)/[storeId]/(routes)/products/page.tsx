@@ -40,14 +40,12 @@ const ProductsPage = async ({
     quantity: item.productSizes.reduce((acc, curr) => acc + curr.quantity, 0),
     category: item.category.name,
     sizes: item.productSizes.map((item) => `${item.size.name}: ${item.quantity}`).join(', '),
-<<<<<<< HEAD
     
-=======
->>>>>>> 84638afcd4981d8e4bf16ea67c36e4fd4c7cfd46
     color: item.color.value,
     createdAt: format(item.createdAt, 'dd/MM/yyyy'),
   }));
 
+  
   return (
     <div className="flex-col">
       <div className="flex-1 space-y-4 p-8 pt-6">
