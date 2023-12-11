@@ -133,7 +133,6 @@ export async function GET(
             quantity: {
               gt: 0,
             },
-            isDeleted: false,
           },
         },
         isFeatured: isFeatured ? true : undefined ,// we dont pass false so it ignores this clause
