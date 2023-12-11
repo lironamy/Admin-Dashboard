@@ -23,6 +23,9 @@ const OrdersPage = async ({
           size: true
         }
       }
+    },
+    orderBy: {
+      createdAt: 'desc'
     }
   });
 
@@ -31,10 +34,8 @@ const OrdersPage = async ({
     phone: item.phone,
     address: item.address,
     products: item.orderItems.map((orderItem) => orderItem.product.name).join(', '),
-    size: item.orderItems.map((orderItem) => orderItem.size.name).join(', '),
-    quantity: item.orderItems.reduce((total, item) => {
-      return total + Number(item.orderQuantity)
-    }, 0),
+    sizes: item.orderItems.map((item) => `${item.size.name}: ${item.orderQuantity}`).join(', '),
+    quantity: item.orderItems.reduce((acc, curr) => acc + curr.orderQuantity, 0),
     totalPrice: formatter.format(item.orderItems.reduce((total, item) => {
       return total + Number(item.orderQuantity) * Number(item.product.price)
     }

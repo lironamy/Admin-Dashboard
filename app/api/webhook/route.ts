@@ -1,41 +1,41 @@
-import Stripe from "stripe"
-import { headers } from "next/headers"
-import { NextResponse } from "next/server"
+import Stripe from "stripe";
+import { headers } from "next/headers";
+import { NextResponse } from "next/server";
 
-import { stripe } from "@/lib/stripe"
-import prismadb from "@/lib/prismadb"
+import { stripe } from "@/lib/stripe";
+import prismadb from "@/lib/prismadb";
 
 export async function POST(req: Request) {
-  const body = await req.text()
-  const signature = headers().get("Stripe-Signature") as string
+  const body = await req.text();
+  const signature = headers().get("Stripe-Signature") as string;
 
-  let event: Stripe.Event
+  let event: Stripe.Event;
 
   try {
     event = stripe.webhooks.constructEvent(
       body,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
-    )
+    );
   } catch (error: any) {
-    return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 })
+    return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 });
   }
 
+  const session = event.data.object as Stripe.Checkout.Session;
+  const address = session?.customer_details?.address;
+
+  const addressComponents = [
+    address?.line1,
+    address?.line2,
+    address?.city,
+    address?.state,
+    address?.postal_code,
+    address?.country,
+  ];
+
+  const addressString = addressComponents.filter(Boolean).join(", ");
+
   if (event.type === "checkout.session.completed") {
-    const session = event.data.object as Stripe.Checkout.Session;
-    const address = session?.customer_details?.address;
-
-    const addressComponents = [
-      address?.line1,
-      address?.line2,
-      address?.city,
-      address?.state,
-      address?.postal_code,
-      address?.country
-    ];
-
-    const addressString = addressComponents.filter(Boolean).join(', ');
-
     const order = await prismadb.order.update({
       where: {
         id: session?.metadata?.orderId,
@@ -43,72 +43,55 @@ export async function POST(req: Request) {
       data: {
         isPaid: true,
         address: addressString,
-        phone: session?.customer_details?.phone || '',
+        phone: session?.customer_details?.phone || "",
       },
       include: {
         orderItems: true,
-      }
+      },
     });
+
+    console.log("order recives:", order);
 
     const productQuantitiesToUpdate = order.orderItems.map((orderItem) => ({
       id: orderItem.productId,
       quantity: orderItem.orderQuantity,
+      productSize: orderItem.orderProductSizeId,
     }));
 
-    const updatePromises = productQuantitiesToUpdate.map(({ id, quantity }) => (
+    console.log("productQuantitiesToUpdate:", productQuantitiesToUpdate);
+
+    const updatePromises = order.orderItems.map((orderItem) =>
       prismadb.productSize.update({
         where: {
-          id,
+          id: orderItem.orderProductSizeId,
         },
         data: {
           quantity: {
-            decrement: quantity,
+            decrement: orderItem.orderQuantity,
           },
         },
       })
-    ));
-    
-    const archivePromise = prismadb.product.updateMany({
+    );
+
+    // Check if all quantities are 0 in ProductSize table and set isArchived to true in Product table
+    const archivePromises = prismadb.product.updateMany({
       where: {
         id: {
-          in: productQuantitiesToUpdate.map(p => p.id),
+          in: productQuantitiesToUpdate.map((pq) => pq.id),
+        },
+        productSizes: {
+          every: {
+            quantity: 0,
+          },
         },
       },
       data: {
-        isArchived: false,
+        isArchived: true,
       },
     });
-    
-    const archivePromises = productQuantitiesToUpdate.map(({ id, quantity }) => (
-      prismadb.productSize.findMany({
-        where: {
-          productId: id,
-        },
-      })
-      .then((productSizes) => {
-        const totalQuantity = productSizes.reduce((acc, size) => acc + size.quantity, 0);
-        
-        if (totalQuantity === 0) {
-          // If total quantity of all sizes is 0, archive the product
-          return prismadb.product.update({
-            where: {
-              id,
-            },
-            data: {
-              isArchived: {
-                set: true,
-              },
-            },
-          });
-        }
-    
-        return Promise.resolve(null); // No need to archive, as there's still some quantity
-      })
-    ));
-    
-    await Promise.all([...updatePromises, archivePromise, ...archivePromises]);
-    
+
+    await Promise.all([...updatePromises, archivePromises]);
   }
 
   return new NextResponse(null, { status: 200 });
-};
+}

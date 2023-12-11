@@ -19,9 +19,15 @@ export async function POST(
   { params }: { params: { storeId: string } }
 ) {
   const { cartItems } = await req.json();
-  console.log('cart items:', cartItems);
 
   const products = await prismadb.product.findMany({
+    include: {
+      productSizes: {
+        include: {
+          size: true,
+        },
+      },
+    },
     where: {
       id: {
         in: cartItems.map((product: any) => product.id),
@@ -31,50 +37,50 @@ export async function POST(
 
   const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
 
-  products.forEach((product) => {
-    const orderItem = cartItems.find((item: any) => item.id === product.id);
-    line_items.push({
-      quantity: orderItem.orderQuantity,
-      price_data: {
-        currency: "ILS",
-        product_data: {
-          name: product.name,
-        },
-        unit_amount: product.price.toNumber() * 100
-      },
+  const orderItemsToCreate = products.flatMap((product) => {
+    return cartItems.map((cartItem: any) => {
+      if (cartItem.id === product.id) {
+        const productSize = product.productSizes.find((size) => size.id === cartItem.ProductSize.id);
+        const sizeId = productSize?.size.id;
+
+        if (productSize) {
+          line_items.push({
+            price_data: {
+              currency: 'ILS',
+              product_data: {
+                name: product.name + ' - ' + productSize.size.name,
+              },
+              unit_amount: product.price.toNumber() * 100,
+            },
+            quantity: cartItem.orderQuantity,
+          });
+
+          return {
+            product: { connect: { id: product.id } },
+            size: { connect: { id: sizeId } },
+            orderQuantity: cartItem.orderQuantity,
+            orderProductSizeId: productSize?.id,
+          };
+        }
+      }
+
+      return null;
     });
   });
+
+  const filteredOrderItems = orderItemsToCreate.filter(Boolean);
 
   const order = await prismadb.order.create({
     data: {
       storeId: params.storeId,
       isPaid: false,
       orderItems: {
-        create: products.map((item: any) => {
-          const cartItem = cartItems.find((orderItem: any) => item.id === orderItem.id);
-          const productSize = cartItem?.ProductSize; // Use optional chaining to handle potential undefined
-          const sizeId = productSize?.sizeId; // Use optional chaining to handle potential undefined
-      
-          return {
-            product: {
-              connect: {
-                id: item.id,
-              },
-            },
-            size: {
-              connect: {
-                id: sizeId,
-              },
-            },
-            
-            orderQuantity: cartItem?.orderQuantity, // Use a default value if orderQuantity is undefined
-          };
-        }),
+        create: filteredOrderItems,
       },
-      
-      
     },
   });
+
+  console.log('order sent:', order);
 
   const session = await stripe.checkout.sessions.create({
     line_items,
@@ -86,11 +92,11 @@ export async function POST(
     success_url: `${process.env.FRONTEND_STORE_URL}/cart?success=1`,
     cancel_url: `${process.env.FRONTEND_STORE_URL}/cart?canceled=1`,
     metadata: {
-      orderId: order.id
+      orderId: order.id,
     },
   });
 
   return NextResponse.json({ url: session.url }, {
-    headers: corsHeaders
+    headers: corsHeaders,
   });
 };

@@ -76,7 +76,7 @@ export async function POST(
         productSizes: {
           createMany: {
             data: [
-              ...productSizes.map((productSize: { sizeId: string,sizeName: string, quantity: number }) => ({ sizeId: productSize.sizeId, sizeName: productSize.sizeName, quantity: productSize.quantity })),
+              ...productSizes.map((productSize: { sizeId: string,sizeName: string, quantity: number, isDeleted: boolean }) => ({ sizeId: productSize.sizeId, sizeName: productSize.sizeName, quantity: productSize.quantity, isDeleted: productSize.isDeleted })),
             ],
           },
         },
@@ -133,6 +133,7 @@ export async function GET(
             quantity: {
               gt: 0,
             },
+            isDeleted: false,
           },
         },
         isFeatured: isFeatured ? true : undefined ,// we dont pass false so it ignores this clause

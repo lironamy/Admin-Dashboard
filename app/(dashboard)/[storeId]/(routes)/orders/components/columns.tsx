@@ -10,7 +10,7 @@ export type OrderColumn = {
   totalPrice: string;
   products: string;
   createdAt: string;
-  size: string;
+  sizes: string;
   quantity: number;
 }
 
@@ -20,12 +20,8 @@ export const columns: ColumnDef<OrderColumn>[] = [
     header: "מוצרים",
   },
   {
-    accessorKey: "size",
-    header: "מידה",
-  },
-  {
-    accessorKey: "quantity",
-    header: "כמות",
+    accessorKey: "sizes",
+    header: "מידה : כמות",
   },
   {
     accessorKey: "createdAt",
