@@ -160,12 +160,6 @@ export async function PATCH(
       },
     });
     
-
-<<<<<<< HEAD
-
-
-=======
->>>>>>> 84638afcd4981d8e4bf16ea67c36e4fd4c7cfd46
     const updatedProduct = await prismadb.product.update({
       where: {
         id: params.productId
