@@ -96,10 +96,13 @@ model OrderItem {
   orderQuantity Int
   productId     String // Foreign Key to Product
   product       Product @relation(fields: [productId], references: [id])
+  productSizeId String // Foreign Key to ProductSize
+  productSize   ProductSize @relation(fields: [productSizeId], references: [id])
   sizeId        String // Foreign Key to Size
   size          Size    @relation(fields: [sizeId], references: [id])
   orderProductSizeId   String 
 
+  @@index([productSizeId])
   @@index([orderId])
   @@index([productId])
   @@index([sizeId])
@@ -127,6 +130,10 @@ model ProductSize {
   sizeId String
   sizeName String  
   size Size @relation(fields: [sizeId], references: [id])
+<<<<<<< HEAD
+=======
+  orderItems OrderItem[]
+>>>>>>> 84638afcd4981d8e4bf16ea67c36e4fd4c7cfd46
   quantity  Int      @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

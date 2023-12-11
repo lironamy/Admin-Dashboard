@@ -75,7 +75,36 @@ export async function POST(
       storeId: params.storeId,
       isPaid: false,
       orderItems: {
+<<<<<<< HEAD
         create: filteredOrderItems,
+=======
+        create: products.map((item: any) => {
+          const cartItem = cartItems.find((orderItem: any) => item.id === orderItem.id);
+          const productSize = cartItem?.ProductSize; // Use optional chaining to handle potential undefined
+          const sizeId = productSize?.sizeId; // Use optional chaining to handle potential undefined
+      
+          return {
+            product: {
+              connect: {
+                id: item.id,
+              },
+            },
+            size: {
+              connect: {
+                id: sizeId,
+              },
+            },
+            productSize: {
+              connect: {
+                id: productSize?.id,
+              },
+            },
+
+            
+            orderQuantity: cartItem?.orderQuantity, // Use a default value if orderQuantity is undefined
+          };
+        }),
+>>>>>>> 84638afcd4981d8e4bf16ea67c36e4fd4c7cfd46
       },
     },
   });
