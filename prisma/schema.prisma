@@ -61,6 +61,7 @@ model Product {
   description       String      @db.VarChar(2500)
   productSizes ProductSize[]
   price             Decimal
+  salePrice         String? 
   isFeatured        Boolean     @default(false)
   isArchived        Boolean     @default(false)
   colorId           String // Foreign Key to Color

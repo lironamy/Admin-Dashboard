@@ -83,7 +83,7 @@ export async function PATCH(
     const body = await req.json();
     console.log('[PRODUCT_PATCH]', body);
 
-    const { name, descriptionHeader, description, price, categoryId, images, colorId, isFeatured, isArchived, productSizes  } = body;
+    const { name, descriptionHeader, description, price, salePrice, categoryId, images, colorId, isFeatured, isArchived, productSizes  } = body;
 
     if (!userId) {
       return new NextResponse("Unauthenticated", { status: 403 });
@@ -111,6 +111,10 @@ export async function PATCH(
 
     if (!price) {
       return new NextResponse("Price is required", { status: 400 });
+    }
+
+    if (!salePrice) {
+      body.salePrice = null;
     }
 
     if (!categoryId) {
@@ -147,6 +151,7 @@ export async function PATCH(
         descriptionHeader,
         description,
         price,
+        salePrice,
         categoryId,
         colorId,
         productSizes: {
@@ -169,6 +174,7 @@ export async function PATCH(
         descriptionHeader,
         description,
         price,
+        salePrice,
         categoryId,
         colorId,
         isFeatured,

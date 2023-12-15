@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { stripe } from "@/lib/stripe";
 import prismadb from "@/lib/prismadb";
+import { Decimal } from "@prisma/client/runtime/library";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,6 +23,7 @@ export async function POST(
 
   const products = await prismadb.product.findMany({
     include: {
+      images: true,
       productSizes: {
         include: {
           size: true,
@@ -37,11 +39,20 @@ export async function POST(
 
   const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
 
+  
+
   const orderItemsToCreate = products.flatMap((product) => {
     return cartItems.map((cartItem: any) => {
       if (cartItem.id === product.id) {
         const productSize = product.productSizes.find((size) => size.id === cartItem.ProductSize.id);
         const sizeId = productSize?.size.id;
+
+        const productPrice: string | Decimal = product.salePrice || product.price;
+
+// Convert productPrice to a number if it's a Decimal
+const priceAsNumber = typeof productPrice === 'string' ? parseFloat(productPrice) : productPrice.toNumber();
+
+
 
         if (productSize) {
           line_items.push({
@@ -49,8 +60,9 @@ export async function POST(
               currency: 'ILS',
               product_data: {
                 name: product.name + ' - ' + productSize.size.name,
+                images: [product.images[0].url],
               },
-              unit_amount: product.price.toNumber() * 100,
+              unit_amount: priceAsNumber * 100,
             },
             quantity: cartItem.orderQuantity,
           });

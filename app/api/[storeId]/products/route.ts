@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs';
 
 import prismadb from '@/lib/prismadb';
+import { set } from 'date-fns';
 
 export async function POST(
   req: Request,
@@ -12,7 +13,7 @@ export async function POST(
 
     const body = await req.json();
 
-    const { name, descriptionHeader, description,  price, categoryId, colorId, images, isFeatured, isArchived, productSizes  } = body;
+    const { name, descriptionHeader, description,  price, salePrice, categoryId, colorId, images, isFeatured, isArchived, productSizes  } = body;
 
     if (!userId) {
       return new NextResponse("Unauthenticated", { status: 403 });
@@ -36,6 +37,11 @@ export async function POST(
 
     if (!productSizes || !productSizes.length) {
       return new NextResponse("productSizes are required", { status: 400 });
+    }
+
+    if (!salePrice) {
+      
+      body.salePrice = null;
     }
 
     if (!price) {
@@ -71,6 +77,7 @@ export async function POST(
         descriptionHeader,
         description,
         price,
+        salePrice,
         isFeatured,
         isArchived,
         productSizes: {

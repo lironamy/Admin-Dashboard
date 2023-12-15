@@ -36,6 +36,7 @@ const formSchema = z.object({
   description: z.string().min(1),
   images: z.object({ url: z.string() }).array(),
   price: z.coerce.number().min(1),
+  salePrice: z.coerce.number().min(1).optional(),
   categoryId: z.string().min(1),
   colorId: z.string().min(1),
   productSizes: z.object({ sizeId: z.string(), sizeName: z.string() , quantity: z.number() }).array(),
@@ -76,12 +77,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const defaultValues = initialData ? {
     ...initialData,
     price: parseFloat(String(initialData?.price)),
+    salePrice: parseFloat(String(initialData?.salePrice)),
   } : {
     name: '',
     descriptionHeader: '',
     description: '',
     images: [],
     price: 0,
+    salePrice: 0,
     categoryId: '',
     colorId: '',
     productSizes: [
@@ -129,28 +132,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     }
     
   }
-
- 
-
-  // const onSubmit = async (data: ProductFormValues) => {
-  //   console.log(data);
-  //   try {
-  //     console.log(data);
-  //     setLoading(true);
-  //     if (initialData) {
-  //       await axios.patch(`/api/${params.storeId}/products/${params.productId}`, data);
-  //     } else {
-  //       await axios.post(`/api/${params.storeId}/products`, data);
-  //     }
-  //     router.refresh();
-  //     router.push(`/${params.storeId}/products`);
-  //     toast.success(toastMessage);
-  //   } catch (error: any) {
-  //     toast.error('משהו השתבש, נסה שוב מאוחר יותר.');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   const onDelete = async () => {
     try {
@@ -255,6 +236,19 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>מחיר</FormLabel>
+                  <FormControl>
+                    <Input type="number" disabled={loading} placeholder="9.99" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="salePrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>מחיר מבצע</FormLabel>
                   <FormControl>
                     <Input type="number" disabled={loading} placeholder="9.99" {...field} />
                   </FormControl>

@@ -36,10 +36,12 @@ const OrdersPage = async ({
     products: item.orderItems.map((orderItem) => orderItem.product.name).join(', '),
     sizes: item.orderItems.map((item) => `${item.size.name}: ${item.orderQuantity}`).join(', '),
     quantity: item.orderItems.reduce((acc, curr) => acc + curr.orderQuantity, 0),
-    totalPrice: formatter.format(item.orderItems.reduce((total, item) => {
-      return total + Number(item.orderQuantity) * Number(item.product.price)
-    }
-      , 0)),
+    totalPrice : formatter.format(
+      item.orderItems.reduce((total, orderItem) => {
+        const itemPrice = orderItem.product.salePrice ? orderItem.product.salePrice : orderItem.product.price;
+        return total + Number(orderItem.orderQuantity) * Number(itemPrice);
+      }, 0)
+    ),
     isPaid: item.isPaid ? 'כן' : 'לא',
     createdAt: format(item.createdAt, 'dd/MM/yyyy'),
   }));
