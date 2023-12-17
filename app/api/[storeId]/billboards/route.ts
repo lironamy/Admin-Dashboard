@@ -12,7 +12,7 @@ export async function POST(
 
     const body = await req.json();
 
-    const { label, imageUrl } = body;
+    const { label, heroImages } = body;
 
     if (!userId) {
       return new NextResponse("לא מאומת", { status: 403 });
@@ -22,7 +22,7 @@ export async function POST(
       return new NextResponse("חובה שם", { status: 400 });
     }
 
-    if (!imageUrl) {
+    if (!heroImages) {
       return new NextResponse("חובה תמונה", { status: 400 });
     }
 
@@ -44,7 +44,13 @@ export async function POST(
     const billboard = await prismadb.billboard.create({
       data: {
         label,
-        imageUrl,
+        heroImages: {
+          createMany: {
+            data: heroImages.map((image: { url: string }) => ({
+              url: image.url,
+            })),
+          },
+        },
         storeId: params.storeId,
       }
     });
@@ -68,6 +74,9 @@ export async function GET(
     const billboards = await prismadb.billboard.findMany({
       where: {
         storeId: params.storeId
+      },
+      include: {
+        heroImages: true
       }
     });
   

@@ -15,6 +15,9 @@ export async function GET(
     const billboard = await prismadb.billboard.findUnique({
       where: {
         id: params.billboardId
+      },
+      include: {
+        heroImages: true
       }
     });
   
@@ -74,7 +77,7 @@ export async function PATCH(
 
     const body = await req.json();
     
-    const { label, imageUrl } = body;
+    const { label, heroImages } = body;
     
     if (!userId) {
       return new NextResponse("לא מאומת", { status: 403 });
@@ -84,8 +87,8 @@ export async function PATCH(
       return new NextResponse("חובה שם", { status: 400 });
     }
 
-    if (!imageUrl) {
-      return new NextResponse("חובה תמונה", { status: 400 });
+    if (!heroImages) {
+      return new NextResponse("חובה תמונות", { status: 400 });
     }
 
     if (!params.billboardId) {
@@ -103,17 +106,35 @@ export async function PATCH(
       return new NextResponse("לא מאומת", { status: 405 });
     }
 
-    const billboard = await prismadb.billboard.update({
+    await prismadb.billboard.update({
+      where: {
+        id: params.billboardId
+      },
+      data: {
+        label,
+        heroImages: {
+          deleteMany: {},
+        },
+      },
+    });
+
+    const updateBillboard = await prismadb.billboard.update({
       where: {
         id: params.billboardId,
       },
       data: {
         label,
-        imageUrl
+        heroImages: {
+          createMany: {
+            data: heroImages.map((image: { url: string }) => ({
+              url: image.url,
+            })),
+          },
+        }
       }
     });
   
-    return NextResponse.json(billboard);
+    return NextResponse.json(updateBillboard);
   } catch (error) {
     console.log('[BILLBOARD_PATCH]', error);
     return new NextResponse("שגיאה פנימית", { status: 500 });
